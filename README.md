@@ -1,5 +1,5 @@
 # podcast
-simple bash script podcast script
+simple podcast script written in bash
 
 	podcast -h  help (this text)
 	podcast -a  add podcast
