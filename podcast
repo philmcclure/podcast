@@ -8,7 +8,7 @@ y=1
 longest_title="0"
 
 while [ $y -le $scount ]; do
-    title_count=$(head -n${y} subscriptions | tail -n1 | cut -d, -f1 | wc -c)
+    title_count=$(head -n${y} $SUBSCRIPTIONS | tail -n1 | cut -d, -f1 | wc -c)
 	if [ $title_count -gt $longest_title ]; then
 		longest_title=$title_count
 	fi
