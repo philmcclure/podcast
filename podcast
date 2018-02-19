@@ -222,6 +222,7 @@ prog_help(){
     echo "$PROG -a  add podcast";
     echo "$PROG -l  list subscribed podcasts";
     echo "$PROG -d  delete podcast";
+    exit
 }
 
 
