@@ -104,6 +104,7 @@ MEDIA="$ROOTDIR/media"
 FEEDS="$ROOTDIR/feeds"
 VERSION="0.1"
 COPYRIGHT="(c) 2018 - Phil McClure"
+POSTHOOK=""
 HEREDOC
 )
 
@@ -152,6 +153,7 @@ for x in *.xml; do
 
 done
 popd > /dev/null
+
 
 }
 
@@ -214,9 +216,9 @@ prog_help(){
     PROG=`basename $0`;
     INFO="$PROG $VERSION $COPYRIGHT"
     DIVIDER="${#INFO}"
-	echo "";
+    echo "";
     echo "$INFO";
-	printf '=%.0s' {1..$DIVIDER};
+    printf %${DIVIDER}s | tr " " "=";
     echo "";
     echo "$PROG -h  help (this text)";
     echo "$PROG -a  add podcast";
