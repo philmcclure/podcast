@@ -1,0 +1,250 @@
+#!/bin/bash
+
+list_podcasts(){
+
+scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
+x=1
+y=1
+longest_title="0"
+
+while [ $y -le $scount ]; do
+    title_count=$(head -n${y} subscriptions | tail -n1 | cut -d, -f1 | wc -c)
+	if [ $title_count -gt $longest_title ]; then
+		longest_title=$title_count
+	fi
+	y=$((y+1))
+done
+
+while [ $x -le $scount ]; do
+    line=$(head -n${x} $SUBSCRIPTIONS | tail -n1)
+    title=$(echo $line | cut -d, -f1)
+    url=$(echo $line | cut -d, -f2)
+    
+    printf "%-${longest_title}s- %s\n" "$title" "$url"
+    x=$((x+1))
+done
+
+}
+
+
+get_authentication() {
+
+	echo
+	echo -n "Username : "; read UNAME
+	echo -n "Password : "; read PWORD
+	POD_NAME_TMP=`echo $POD_URL | sed 's/http:\/\///'`;
+	POD_URL=`echo $POD_NAME_TMP`;
+}
+
+
+add_subscription(){
+
+while true
+do
+clear
+echo -n "Podcast name: "; read POD_NAME
+echo -n "Podcast URL: "; read POD_URL
+echo -n "Is this a password-protected podcast? (y/N) "; read -n1 OPTION
+
+case $OPTION in
+y|Y ) get_authentication ;;
+* ) echo ;;
+esac
+
+echo "${POD_NAME},${POD_URL},${UNAME},${PWORD}" >> $SUBSCRIPTIONS
+
+echo "Add another podcast? (Y/n) "; read -n1 OPTION2
+
+case $OPTION2 in
+y|Y ) add_subscription ;;
+n|N ) break ;;
+* ) clear ;;
+esac
+
+done
+exit
+}
+
+
+install_script(){
+available_paths=( $(echo $PATH | sed 's/:/\ /g') );
+ap_count=${#available_paths[@]}
+SRC_DIR=$(pwd)
+
+x=0
+while [ $x -lt $ap_count ]; do
+    if [ -w ${available_paths[${x}]} ]; then
+        writable_path=${available_paths[${x}]}
+        x=$ap_count
+    else
+        x=$((x+1))
+    fi
+    if [ $x -eq $ap_count ]; then
+        if [ -z $writable_path ]; then
+            echo "No writable directories found in your \$PATH."
+            exit;
+        fi
+    fi
+done
+
+if [ ! -z "$XDG_CONFIG_HOME" ]; then
+    CONFIG_DIR="$XDG_CONFIG_HOME"
+else 
+    CONFIG_DIR="$HOME/.config"
+fi
+
+mkdir -p $CONFIG_DIR/podcast/{feeds,media}
+touch $CONFIG_DIR/podcast/{config,subscriptions}
+cp $SRC_DIR/podcast $writable_path/podcast
+
+config_file=$(cat <<'HEREDOC'
+ROOTDIR="$HOME/.config/podcast"
+SUBSCRIPTIONS="$ROOTDIR/subscriptions"
+MEDIA="$ROOTDIR/media"
+FEEDS="$ROOTDIR/feeds"
+VERSION="0.1"
+COPYRIGHT="(c) 2018 - Phil McClure"
+HEREDOC
+)
+
+echo "$config_file" > $CONFIG_DIR/podcast/config
+source "$HOME/.config/podcast/config"
+
+add_subscription
+}
+
+update_feeds(){
+
+scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
+x=1
+
+while [ $x -le $scount ]; do
+    url=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f2)
+    title=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f1)
+    user=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f3)
+    pass=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f4)
+
+    if [ -z "$user" ]; then
+        curl -s -L -z "${FEEDS}/${title}.xml" -o "${FEEDS}/${title}.xml" $url 
+    else
+        host=$(echo $url | cut -d\/ -f3-);
+        protocol=$(echo $url | cut -d: -f1);
+        url="${protocol}://${user}:${pass}@${host}"
+        curl -s -L -z "${FEEDS}/${title}.xml" -o "${FEEDS}/${title}.xml" $url
+    fi
+    x=$((x+1))
+done
+
+get_new_podcasts
+}
+
+
+get_new_podcasts(){
+
+pushd ${FEEDS} > /dev/null
+for x in *.xml; do
+
+    filename="$x"
+    feed_url=$(sed '/enclosure/!d' "${filename}" 2>/dev/null | head -n1 | cut -d\" -f2- | cut -d\" -f1)
+    outfile=$(echo "$filename" | sed 's/xml/mp3/')
+    echo "Downloading ${outfile}..."
+    curl -s -L -o "${MEDIA}/${outfile}" "$feed_url"
+
+done
+popd > /dev/null
+
+}
+
+
+rm_subscription(){
+
+while true; do
+    scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
+    x=1
+    
+    echo;
+    echo "Select podcast subscription to remove. ";
+    echo "====================================== ";
+    while [ $x -le $scount ]; do
+        line=$(head -n${x} $SUBSCRIPTIONS | tail -n1)
+        title=$(echo $line | cut -d, -f1)
+        printf "%d. %s\n" "$x" "$title"
+        x=$((x+1))
+    done
+
+    echo -n "Select [ 1 - ${scount} | x to exit ]: "; read -n1 CHOICE
+
+    case $CHOICE in
+        x|X) 
+            echo;
+            exit;;
+        *[0-9]*) 
+            echo;
+            break;;
+        *) 
+            echo;;
+    esac
+    echo;
+done
+echo;
+
+subscription_to_remove=$(head -n${CHOICE} $SUBSCRIPTIONS | tail -n1 | cut -d, -f1)
+echo -n "Are you sure you want to remove \"$subscription_to_remove\"? (y/N): "; read -n1 CHOICE
+echo;
+
+case $CHOICE in
+    y|Y)
+        subscriptions=$(cat $SUBSCRIPTIONS);
+        new_subscriptions=$(echo "$subscriptions" | sed -e "/$subscription_to_remove/d");
+        echo "$new_subscriptions" > $SUBSCRIPTIONS;
+        rm "${MEDIA}/${subscription_to_remove}.mp3" > /dev/null 2>&1;
+        rm "${FEEDS}/${subscription_to_remove}.xml" > /dev/null 2>&1;
+        echo "\"$subscription_to_remove\" removed.";
+        echo ;;
+    *) 
+        echo "User aborted.";
+        exit;;
+esac
+
+}
+
+
+prog_help(){
+    
+    PROG=`basename $0`;
+    INFO="$PROG $VERSION $COPYRIGHT"
+    DIVIDER="${#INFO}"
+	echo "";
+    echo "$INFO";
+	printf '=%.0s' {1..$DIVIDER};
+    echo "";
+    echo "$PROG -h  help (this text)";
+    echo "$PROG -a  add podcast";
+    echo "$PROG -l  list subscribed podcasts";
+    echo "$PROG -d  delete podcast";
+}
+
+
+if [ -e "$HOME/.config/podcast/config" ]; then
+    source "$HOME/.config/podcast/config"
+else
+    install_script
+fi
+
+while getopts ":hald" opt; do
+    case $opt in
+        h)
+            prog_help;;
+        a)
+            add_subscription;;
+        l)
+            list_podcasts;;
+        d)
+            rm_subscription;;
+        *)
+            prog_help;;
+    esac
+done
+if [ "$opt" = "?" ]; then
+    update_feeds
+fi
