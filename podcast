@@ -24,6 +24,7 @@ while [ $x -le $scount ]; do
     x=$((x+1))
 done
 
+exit
 }
 
 
@@ -154,7 +155,9 @@ for x in *.xml; do
 done
 popd > /dev/null
 
-
+if [ ! -z "$POSTHOOK" ]; then
+    $( $POSTHOOK )
+fi
 }
 
 
@@ -207,7 +210,7 @@ case $CHOICE in
         echo "User aborted.";
         exit;;
 esac
-
+exit;
 }
 
 
@@ -216,9 +219,9 @@ prog_help(){
     PROG=`basename $0`;
     INFO="$PROG $VERSION $COPYRIGHT"
     DIVIDER="${#INFO}"
-    echo "";
+	echo "";
     echo "$INFO";
-    printf %${DIVIDER}s | tr " " "=";
+	printf %${DIVIDER}s | tr " " "="
     echo "";
     echo "$PROG -h  help (this text)";
     echo "$PROG -a  add podcast";
