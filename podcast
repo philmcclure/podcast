@@ -113,6 +113,7 @@ MEDIA="$ROOTDIR/media"
 FEEDS="$ROOTDIR/feeds"
 VERSION="0.1"
 COPYRIGHT="(c) 2018 - Phil McClure"
+VERBOSE="1"
 POSTHOOK=""
 HEREDOC
 )
@@ -125,6 +126,7 @@ add_subscription
 
 update_feeds(){
 
+do_posthook="0"
 scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
 x=1
 
@@ -138,8 +140,11 @@ while [ $x -le $scount ]; do
     if [ -z "$user" ]; then
        if [ $(curl -s -L -z "${FEEDS}/${title}.xml" -o "${FEEDS}/${title}.xml" $url -w %{http_code}) == "200" ]; then
            get_new_podcasts "${title}.xml" 
+           do_posthook=$(( do_posthook+1 ))
        else
-           echo "No new podcasts for ${title}..."
+           if [ "$VERBOSE" -eq 1 ]; then
+               echo "No new podcasts for ${title}..."
+           fi
        fi
     else
         host=$(echo $url | cut -d\/ -f3-);
@@ -147,13 +152,19 @@ while [ $x -le $scount ]; do
         url="${protocol}://${user}:${pass}@${host}"
         if [ $(curl -s -L -z "${FEEDS}/${title}.xml" -o "${FEEDS}/${title}.xml" $url -w %{http_code}) == "200"]; then
             get_new_podcasts "${title}.xml"
+            do_posthook=$(( do_posthook+1 ))
         fi
     fi
     x=$((x+1))
 done
 
-if [ ! -z "$POSTHOOK" ]; then
-    $( $POSTHOOK )
+if [ "$do_posthook" -ne 0 ]; then
+    if [ "$VERBOSE" -eq 1 ]; then
+        echo "Executing POSTHOOK..."
+    fi
+    if [ ! -z "$POSTHOOK" ]; then
+        $( $POSTHOOK )
+    fi
 fi
 }
 
@@ -166,7 +177,9 @@ filename="$1"
 
 feed_url=$(sed '/enclosure/!d' "${filename}" 2>/dev/null | head -n1 | cut -d\" -f2- | cut -d\" -f1)
 outfile=$(echo "$filename" | sed 's/xml/mp3/')
-echo "Downloading ${outfile}..."
+if [ "$VERBOSE" -eq 1 ]; then
+    echo "Downloading ${outfile}..."
+fi
 curl -s -L -o "${MEDIA}/${outfile}" "$feed_url"
 
 popd > /dev/null
