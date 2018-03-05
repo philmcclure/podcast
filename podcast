@@ -1,7 +1,6 @@
 #!/bin/bash
 
-list_podcasts(){
-
+list_podcasts() {
 scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
 x=1
 y=1
@@ -29,58 +28,53 @@ exit
 
 
 get_authentication() {
-
 	echo
 	echo -n "Username : "; read UNAME
 	echo -n "Password : "; read PWORD
-	POD_NAME_TMP=`echo $POD_URL | sed 's/http:\/\///'`;
-	POD_URL=`echo $POD_NAME_TMP`;
+	POD_NAME_TMP=$(echo $POD_URL | sed 's/http:\/\///');
+	POD_URL=$(echo $POD_NAME_TMP);
 }
 
 
-add_subscription(){
-
-while true
-do
-echo
-echo "Add new podcast [ x to exit ]"
-echo "============================="
-echo -n "Podcast name: "; read POD_NAME
-if [ "$POD_NAME" == "x" ] || [ "$POD_NAME" == "X" ]; then
-    exit
-fi
-echo -n "Podcast URL: "; read POD_URL
-if [ "$POD_URL" == "x" ] || [ "$POD_URL" == "X" ]; then
-    exit
-fi
-echo -n "Is this a password-protected podcast? (y/N) "; read -n1 OPTION
-
-case $OPTION in
-y|Y ) get_authentication ;;
-* ) echo ;;
-esac
-
-echo "${POD_NAME},${POD_URL},${UNAME},${PWORD}" >> $SUBSCRIPTIONS
-
-echo "Add another podcast? (Y/n) "; read -n1 OPTION2
-
-case $OPTION2 in
-y|Y ) add_subscription ;;
-n|N ) break ;;
-* ) clear ;;
-esac
-
+add_subscription() {
+while true;do
+    echo
+    echo "Add new podcast [ x to exit ]"
+    echo "============================="
+    echo -n "Podcast name: "; read POD_NAME
+        if [ "$POD_NAME" == "x" ] || [ "$POD_NAME" == "X" ]; then
+            exit
+        fi
+    echo -n "Podcast URL: "; read POD_URL
+        if [ "$POD_URL" == "x" ] || [ "$POD_URL" == "X" ]; then
+            exit
+        fi
+    echo -n "Is this a password-protected podcast? (y/N) "; read -n1 OPTION
+    
+    case $OPTION in
+        y|Y ) get_authentication ;;
+          * ) echo ;;
+    esac
+    
+    echo "${POD_NAME},${POD_URL},${UNAME},${PWORD}" >> $SUBSCRIPTIONS
+    echo "Add another podcast? (Y/n) "; read -n1 OPTION2
+    
+    case $OPTION2 in
+        y|Y ) add_subscription ;;
+        n|N ) break ;;
+          * ) clear ;;
+    esac
 done
 exit
 }
 
 
-install_script(){
+install_script() {
 available_paths=( $(echo $PATH | sed 's/:/\ /g') );
 ap_count=${#available_paths[@]}
 SRC_DIR=$(pwd)
-
 x=0
+
 while [ $x -lt $ap_count ]; do
     if [ -w ${available_paths[${x}]} ]; then
         writable_path=${available_paths[${x}]}
@@ -99,18 +93,18 @@ done
 if [ ! -z "$XDG_CONFIG_HOME" ]; then
     CONFIG_DIR="$XDG_CONFIG_HOME"
 else 
-    CONFIG_DIR="$HOME/.config"
+    CONFIG_DIR="${HOME}/.config"
 fi
 
-mkdir -p $CONFIG_DIR/podcast/{feeds,media}
-touch $CONFIG_DIR/podcast/{config,subscriptions}
-cp $SRC_DIR/podcast $writable_path/podcast
+mkdir -p ${CONFIG_DIR}/podcast/{feeds,media}
+touch ${CONFIG_DIR}/podcast/{config,subscriptions}
+cp ${SRC_DIR}/podcast ${writable_path}/podcast
 
 config_file=$(cat <<'HEREDOC'
-ROOTDIR="$HOME/.config/podcast"
-SUBSCRIPTIONS="$ROOTDIR/subscriptions"
-MEDIA="$ROOTDIR/media"
-FEEDS="$ROOTDIR/feeds"
+ROOTDIR="${HOME}/.config/podcast"
+SUBSCRIPTIONS="${ROOTDIR}/subscriptions"
+MEDIA="${ROOTDIR}/media"
+FEEDS="${ROOTDIR}/feeds"
 VERSION="0.1"
 COPYRIGHT="(c) 2018 - Phil McClure"
 VERBOSE="1"
@@ -118,14 +112,12 @@ POSTHOOK=""
 HEREDOC
 )
 
-echo "$config_file" > $CONFIG_DIR/podcast/config
-source "$HOME/.config/podcast/config"
-
+echo "$config_file" > ${CONFIG_DIR}/podcast/config
+source "${HOME}/.config/podcast/config"
 add_subscription
 }
 
-update_feeds(){
-
+update_feeds() {
 do_posthook="0"
 scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
 x=1
@@ -133,7 +125,6 @@ x=1
 while [ $x -le $scount ]; do
     url=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f2)
     title=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f1)
-    title_underscore=$(echo "$title" | sed 's/\ /_/g')
     user=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f3)
     pass=$(head -n${x} $SUBSCRIPTIONS | tail -n1 | cut -d, -f4)
 
@@ -169,10 +160,8 @@ fi
 }
 
 
-get_new_podcasts(){
-
+get_new_podcasts() {
 pushd ${FEEDS} > /dev/null
-
 filename="$1"
 
 feed_url=$(sed '/enclosure/!d' "${filename}" 2>/dev/null | head -n1 | cut -d\" -f2- | cut -d\" -f1)
@@ -181,13 +170,11 @@ if [ "$VERBOSE" -eq 1 ]; then
     echo "Downloading ${outfile}..."
 fi
 curl -s -L -o "${MEDIA}/${outfile}" "$feed_url"
-
 popd > /dev/null
 }
 
 
-rm_subscription(){
-
+rm_subscription() {
 while true; do
     scount=$(wc -l $SUBSCRIPTIONS | awk '{ print $1 }')
     x=1
@@ -203,16 +190,10 @@ while true; do
     done
 
     echo -n "Select [ 1 - ${scount} | x to exit ]: "; read -n1 CHOICE
-
     case $CHOICE in
-        x|X) 
-            echo;
-            exit;;
-        *[0-9]*) 
-            echo;
-            break;;
-        *) 
-            echo;;
+        x|X) echo;exit;;
+    *[0-9]*) echo;break;;
+          *) echo;;
     esac
     echo;
 done
@@ -239,15 +220,14 @@ exit;
 }
 
 
-prog_help(){
-    
-    PROG=`basename $0`;
+prog_help() {
+    PROG=$(basename $0);
     INFO="$PROG $VERSION $COPYRIGHT"
     DIVIDER="${#INFO}"
-	echo "";
+	echo
     echo "$INFO";
 	printf %${DIVIDER}s | tr " " "="
-    echo "";
+    echo
     echo "$PROG -h  help (this text)";
     echo "$PROG -a  add podcast";
     echo "$PROG -l  list subscribed podcasts";
@@ -264,18 +244,14 @@ fi
 
 while getopts ":hald" opt; do
     case $opt in
-        h)
-            prog_help;;
-        a)
-            add_subscription;;
-        l)
-            list_podcasts;;
-        d)
-            rm_subscription;;
-        *)
-            prog_help;;
+        h) prog_help;;
+        a) add_subscription;;
+        l) list_podcasts;;
+        d) rm_subscription;;
+        *) prog_help;;
     esac
 done
+
 if [ "$opt" = "?" ]; then
     update_feeds
 fi
