@@ -42,9 +42,17 @@ add_subscription(){
 
 while true
 do
-clear
+echo
+echo "Add new podcast [ x to exit ]"
+echo "============================="
 echo -n "Podcast name: "; read POD_NAME
+if [ "$POD_NAME" == "x" ] || [ "$POD_NAME" == "X" ]; then
+    exit
+fi
 echo -n "Podcast URL: "; read POD_URL
+if [ "$POD_URL" == "x" ] || [ "$POD_URL" == "X" ]; then
+    exit
+fi
 echo -n "Is this a password-protected podcast? (y/N) "; read -n1 OPTION
 
 case $OPTION in
