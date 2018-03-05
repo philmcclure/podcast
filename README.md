@@ -38,3 +38,5 @@ By default, all media is downloaded to `$XDG_CONFIG_HOME/podcast/media`. This lo
 In `$XDG_CONFIG_HOME/podcast/config` there is a variable called `POSTHOOK`.  You can put additional commands in this variable to be executed after your media finishes downloading.
 
 For instance, you could play audio after your downloads finish, or you could `scp` the media to a server on your network, whatever.  You could also just leave it blank and change the `MEDIA` variable in the `config`.
+
+The `POSTHOOK` **will not run** if no new media is downloaded.
