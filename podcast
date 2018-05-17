@@ -164,7 +164,7 @@ get_new_podcasts() {
 pushd ${FEEDS} > /dev/null
 filename="$1"
 
-feed_url=$(sed '/enclosure/!d' "${filename}" 2>/dev/null | head -n1 | cut -d\" -f2- | cut -d\" -f1)
+feed_url=$(sed '/enclosure/!d' "${filename}" 2>/dev/null | head -n1 | sed 's/\ /\n/g' | grep url | cut -d\" -f2- | cut -d\" -f1)
 outfile=$(echo "$filename" | sed 's/xml/mp3/')
 if [ "$VERBOSE" -eq 1 ]; then
     echo "Downloading ${outfile}..."
